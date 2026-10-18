@@ -75,6 +75,10 @@ def listar() -> list[dict[str, Any]]:
     return sorted(itens, key=lambda item: item["criadoEm"], reverse=True)
 
 
+def existe(item_id: str) -> bool:
+    return bool(obter_indice().colecao(COLECAO_CACHE).get(ids=[item_id], include=[])["ids"])
+
+
 def apagar(item_id: str) -> None:
     obter_indice().colecao(COLECAO_CACHE).delete(ids=[item_id])
 

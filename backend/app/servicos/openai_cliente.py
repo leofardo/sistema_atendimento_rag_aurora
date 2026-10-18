@@ -56,9 +56,22 @@ def _cliente_http() -> httpx.AsyncClient:
     if _cliente is None or _cliente.is_closed:
         _cliente = httpx.AsyncClient(
             base_url=URL_BASE, timeout=_timeout(),
-            limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=120),
+            limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=300),
         )
     return _cliente
+
+
+async def aquecer() -> None:
+    """Abre a conexão (DNS + TLS) antes da primeira mensagem.
+
+    GET /models não gasta token nem custa nada. Sem isso, a primeira pergunta
+    depois de ligar a API pagava ~3 s só para abrir a conexão (medido: roteador
+    em 3,9 s contra ~0,8 s com a conexão já aberta).
+    """
+    try:
+        await _cliente_http().get("/models", headers=_cabecalhos())
+    except (httpx.HTTPError, ErroOpenAI):
+        pass  # sem rede ou sem chave: a primeira mensagem só fica mais lenta
 
 
 async def fechar() -> None:

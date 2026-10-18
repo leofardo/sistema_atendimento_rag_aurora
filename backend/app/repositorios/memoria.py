@@ -37,6 +37,7 @@ def novo_protocolo() -> str:
 
 
 class Memoria(Protocol):
+    def existe(self, sessao: str) -> bool: ...
     def protocolo(self, sessao: str) -> str: ...
     def adicionar(self, sessao: str, autor: str, texto: str, meta: dict[str, Any] | None = None) -> None: ...
     def mensagens(self, sessao: str) -> list[dict[str, str]]: ...
@@ -52,6 +53,10 @@ class Memoria(Protocol):
 class MemoriaSQLite:
     def nome(self) -> str:
         return "SQLite"
+
+    def existe(self, sessao: str) -> bool:
+        with obter_conexao() as conexao:
+            return conexao.execute("SELECT 1 FROM conversas WHERE sessao = ?", (sessao,)).fetchone() is not None
 
     def protocolo(self, sessao: str) -> str:
         with obter_conexao() as conexao:
@@ -130,6 +135,9 @@ class MemoriaRedis:
 
     def nome(self) -> str:
         return "Redis"
+
+    def existe(self, sessao: str) -> bool:
+        return bool(self._r.exists(f"conversa:{sessao}"))
 
     def _renovar(self, sessao: str) -> None:
         for chave in (f"conversa:{sessao}", f"mensagens:{sessao}"):

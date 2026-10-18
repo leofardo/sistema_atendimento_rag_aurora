@@ -110,38 +110,55 @@ def estilos() -> None:
     st.html(CSS)
 
 
+# Os caches guardam só respostas BOAS: o erro é tratado fora, senão um token
+# vencido deixaria "API fora do ar" guardado por minutos.
 @st.cache_data(ttl=300, show_spinner=False)
-def configuracao() -> dict | None:
+def _configuracao() -> dict:
     """Modelos, cotação e memória — muda raramente, então fica 5 min em cache."""
+    return api.get("/configuracao")
+
+
+def configuracao() -> dict | None:
     try:
-        return api.get("/api/custos/configuracao")
+        return _configuracao()
     except api.ErroApi:
         return None
 
 
+configuracao.clear = _configuracao.clear  # type: ignore[attr-defined]
+
+
 @st.cache_data(ttl=30, show_spinner=False)
+def _conversas() -> list[dict]:
+    return api.get("/conversas", limite=30)["conversas"]
+
+
 def conversas() -> list[dict]:
     try:
-        return api.get("/api/chat/conversas", limite=30)["conversas"]
+        return _conversas()
     except api.ErroApi:
         return []
 
 
+conversas.clear = _conversas.clear  # type: ignore[attr-defined]
+
+
 # --- sessão de atendimento ----------------------------------------------------
 def nova_conversa() -> None:
-    dados = api.post("/api/chat/sessao")
-    st.session_state.sessao = dados["sessao"]
+    dados = api.post("/conversas")
+    st.session_state.sessao = dados["id"]
     st.session_state.protocolo = dados["protocolo"]
     st.session_state.mensagens = []
 
 
 def abrir_conversa(sessao: str) -> None:
     """Carrega uma conversa antiga com custos, rota e fontes de cada resposta."""
-    dados = api.get(f"/api/chat/sessao/{sessao}")
+    dados = api.get(f"/conversas/{sessao}")
     st.session_state.sessao = sessao
     st.session_state.protocolo = dados["protocolo"]
     st.session_state.mensagens = [{"autor": m["autor"], "texto": m["texto"], **(m.get("meta") or {})}
                                   for m in dados["mensagens"]]
+
 
 
 def garantir_sessao(no_endereco: bool = False) -> None:
@@ -192,19 +209,20 @@ def barra_lateral(paginas: dict) -> None:
                     f'border-color: rgba(59,130,246,.35) !important; }}</style>')
             for conversa in lista:
                 titulo = conversa.get("titulo") or f"Conversa {conversa['protocolo'][-6:]}"
-                ajuda = (f"{data_hora(conversa.get('atualizada_em'))} · Protocolo {conversa['protocolo']} · "
+                ajuda = (f"{data_hora(conversa.get('atualizadaEm'))} · Protocolo {conversa['protocolo']} · "
                          f"{conversa['mensagens']} mensagens · {brl(conversa['brl'], 5)}")
                 nome, lixeira = st.columns([6, 1], gap=None, vertical_alignment="center")
-                if nome.button(titulo, key=f"conversa-{conversa['sessao']}", width="stretch", type="tertiary",
+                if nome.button(titulo, key=f"conversa-{conversa['id']}", width="stretch", type="tertiary",
                                help=ajuda.replace("$", "\\$")):
                     try:
-                        abrir_conversa(conversa["sessao"])
+                        abrir_conversa(conversa["id"])
                         st.switch_page(paginas["chat"])
                     except api.ErroApi as erro:
                         st.error(str(erro))
-                if lixeira.button("", icon=":material/delete:", key=f"apagar-{conversa['sessao']}", type="tertiary",
+                if lixeira.button("", icon=":material/delete:", key=f"apagar-{conversa['id']}", type="tertiary",
                                   help="Excluir conversa"):
-                    confirmar_exclusao(conversa["sessao"], titulo, paginas)
+                    confirmar_exclusao(conversa["id"], titulo, paginas)
+
 
 
 @st.dialog("Excluir conversa")
@@ -215,7 +233,7 @@ def confirmar_exclusao(sessao: str, titulo: str, paginas: dict) -> None:
     if cancelar.button("Cancelar", width="stretch"):
         st.rerun()
     if excluir.button("Excluir", type="primary", icon=":material/delete:", width="stretch"):
-        api.delete(f"/api/chat/sessao/{sessao}")
+        api.delete(f"/conversas/{sessao}")
         conversas.clear()
         if st.session_state.get("sessao") == sessao:
             nova_conversa()

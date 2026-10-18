@@ -1,10 +1,16 @@
-"""Livro-caixa e configuração de custos."""
+"""Livro-caixa de custos e configuração do sistema (modelos, preços, prompts)."""
 
 from typing import Any
 
 from fastapi import APIRouter
-from pydantic import BaseModel
 
+from app.esquemas import (
+    Estimativa,
+    ListaDeChamadas,
+    ListaDeMensagensComCusto,
+    ResumoDeCustos,
+    TextoParaEstimar,
+)
 from app.nucleo.configuracao import (
     dimensoes_embedding,
     max_tokens_resposta,
@@ -22,33 +28,44 @@ from app.repositorios.memoria import obter_memoria
 from app.servicos import prompt_resposta, roteador
 from app.servicos.cotacao import atualizar_cotacao, origem_da_cotacao
 
-rota = APIRouter(prefix="/api/custos", tags=["custos"])
+rota = APIRouter(prefix="/custos", tags=["Custos"])
+rota_configuracao = APIRouter(tags=["Configuração"])
 
+@rota.get("/resumo", response_model=ResumoDeCustos, summary="Resumo de custos")
+async def obter_resumo(desde: str | None = None, ate: str | None = None) -> dict:
+    """Totais do período, separados em atendimento e indexação/testes, e por operação, rota e intenção.
 
-class TextoParaEstimar(BaseModel):
-    texto: str
-    modelo: str | None = None
-
-
-@rota.get("/resumo")
-async def obter_resumo(desde: str | None = None, ate: str | None = None) -> dict[str, Any]:
+    `desde` e `ate`: instantes em UTC (AAAA-MM-DD hh:mm:ss). Sem eles, todo o histórico.
+    """
     await atualizar_cotacao()
     return {**custos.resumo(desde, ate), "origemCotacao": origem_da_cotacao()}
 
 
-@rota.get("/chamadas")
-def listar_chamadas(limite: int = 200, desde: str | None = None, ate: str | None = None) -> dict[str, Any]:
+@rota.get("/chamadas", response_model=ListaDeChamadas, summary="Listar chamadas à OpenAI")
+def listar_chamadas(limite: int = 200, desde: str | None = None, ate: str | None = None) -> dict:
+    """O livro-caixa chamada a chamada: operação, modelo, tokens e custo de cada uma."""
     return {"chamadas": custos.listar_chamadas(min(limite, 1000), desde, ate)}
 
 
-@rota.get("/turnos")
-def listar_turnos(limite: int = 200, desde: str | None = None, ate: str | None = None) -> dict[str, Any]:
-    return {"turnos": custos.listar_turnos(min(limite, 1000), desde, ate)}
+@rota.get("/mensagens", response_model=ListaDeMensagensComCusto, summary="Listar mensagens com custo")
+def listar_mensagens(limite: int = 200, desde: str | None = None, ate: str | None = None) -> dict:
+    """Cada pergunta do cliente, com protocolo, rota, intenção, tokens e quanto custou."""
+    return {"mensagens": custos.listar_turnos(min(limite, 1000), desde, ate)}
 
 
-@rota.get("/configuracao")
+@rota.post("/estimativas", response_model=Estimativa, summary="Estimar custo de um texto")
+async def estimar(corpo: TextoParaEstimar) -> dict:
+    """Quantos tokens e quanto custa um texto como ENTRADA, a cada envio, sem cache."""
+    await atualizar_cotacao()
+    modelo = corpo.modelo or modelo_resposta()
+    tokens = contar_tokens(corpo.texto, modelo)
+    custo = calcular(modelo, tokens)
+    return {"modelo": modelo, "tokens": tokens, "usd": custo["usdEntrada"], "brl": custo["brlEntrada"]}
+
+
+@rota_configuracao.get("/configuracao", summary="Configuração atual")
 async def configuracao() -> dict[str, Any]:
-    """Modelos, preços e quanto os prompts fixos custam a cada envio."""
+    """Modelos em uso, tabela de preços, parâmetros do RAG e quanto os prompts fixos custam a cada envio."""
     await atualizar_cotacao()
     resposta, rot = modelo_resposta(), modelo_roteador()
 
@@ -75,12 +92,3 @@ async def configuracao() -> dict[str, Any]:
         ],
         "origemCotacao": origem_da_cotacao(),
     }
-
-
-@rota.post("/estimar")
-async def estimar(corpo: TextoParaEstimar) -> dict[str, Any]:
-    await atualizar_cotacao()
-    modelo = corpo.modelo or modelo_resposta()
-    tokens = contar_tokens(corpo.texto, modelo)
-    custo = calcular(modelo, tokens)
-    return {"modelo": modelo, "tokens": tokens, "usd": custo["usdEntrada"], "brl": custo["brlEntrada"]}

@@ -12,17 +12,17 @@ from formatos import BRASILIA, brl, h, inteiro, md
 
 @st.cache_data(ttl=60, show_spinner=False)
 def documentos() -> dict:
-    return api.get("/api/base/documentos")
+    return api.get("/base/documentos")
 
 
 @st.cache_data(ttl=300, show_spinner=False)
 def trechos_da_fonte(fonte: str) -> list[dict]:
-    return api.get("/api/base/trechos", fonte=fonte)["trechos"]
+    return api.get("/base/trechos", fonte=fonte)["trechos"]
 
 
 @st.cache_data(ttl=300, show_spinner=False)
 def pedidos() -> list[dict]:
-    return api.get("/api/base/pedidos")["pedidos"]
+    return api.get("/pedidos")["pedidos"]
 
 
 ui.cabecalho("Conhecimento", "Base de conhecimento",
@@ -46,7 +46,7 @@ with st.container(border=True):
     if acao1.button("Reindexar", icon=":material/sync:", width="stretch", help="Só trechos novos ou alterados pagam embedding."):
         with st.spinner("Indexando…"):
             try:
-                resultado = api.post("/api/base/reindexar")
+                resultado = api.post("/base/indexacoes")
                 custo = resultado.get("custo")
                 st.success(md(
                     f"{resultado['trechos']} trechos · {resultado['novos']} novos · {resultado['reaproveitados']} "
@@ -57,11 +57,11 @@ with st.container(border=True):
             except api.ErroApi as erro:
                 st.error(str(erro))
     if acao2.button("Limpar cache", icon=":material/delete_sweep:", width="stretch", help="Apaga as respostas do cache semântico."):
-        st.info(f"{api.post('/api/base/cache/limpar')['removidos']} respostas removidas do cache.")
+        st.info(f"{api.delete('/base/cache')['removidos']} respostas removidas do cache.")
         documentos.clear()
     st.dataframe(pd.DataFrame([
         {"Documento": d["titulo"], "Fonte": d["fonte"], "Tipo": d["tipo"], "Trechos": d["trechos"],
-         "Tokens": d["tokens"], "Origem": d["url"]}
+         "Tokens": d["tokens"], "Origem": d["url"] if d["url"].startswith("http") else None}
         for d in dados["documentos"]
     ]), hide_index=True, width="stretch", column_config={"Origem": st.column_config.LinkColumn("Origem")})
     if dados["totalTrechos"] == 0:
@@ -72,7 +72,7 @@ with st.container(border=True):
                    "Perguntas já respondidas que são reaproveitadas quando alguém pergunta algo quase igual "
                    "(similaridade ≥ 0,95). Somem sozinhas em 7 dias ou quando a base muda.")
     try:
-        itens = api.get("/api/base/cache")["itens"]
+        itens = api.get("/base/cache")["itens"]
     except api.ErroApi as erro:
         itens = []
         st.error(str(erro))
@@ -92,7 +92,7 @@ with st.container(border=True):
         if st.button(f"Apagar selecionadas ({len(escolhidas)})", icon=":material/delete:",
                      disabled=not escolhidas, help="Marque as linhas na tabela"):
             for linha in escolhidas:
-                api.delete(f"/api/base/cache/{itens[linha]['id']}")
+                api.delete(f"/base/cache/{itens[linha]['id']}")
             documentos.clear()
             st.rerun()
 
@@ -104,21 +104,22 @@ with st.container(border=True):
                              label_visibility="collapsed")
     if consulta:
         try:
-            busca = api.get("/api/base/buscar", q=consulta, k=6)
+            busca = api.get("/base/trechos", busca=consulta, limite=6)
         except api.ErroApi as erro:
             st.error(str(erro))
         else:
-            st.html(ui.pills((f"embedding {inteiro(busca['custo']['entrada'])} tokens", ""),
-                             (brl(busca["custo"]["brl"], 6), "valor")))
-            if not busca["resultados"]:
+            st.html(f'<div class="custo">Embedding da consulta: <b>{inteiro(busca["custo"]["entrada"])} tokens</b>'
+                    f' · Custo <span class="total">{h(brl(busca["custo"]["brl"], 6))}</span></div>')
+            if not busca["trechos"]:
                 st.info("Nenhum trecho acima da similaridade mínima: o atendimento responderia que não encontrou.")
-            for n, r in enumerate(busca["resultados"], start=1):
-                posicoes = [f"vetorial #{r['posicaoVetorial']}" if r["posicaoVetorial"] else "",
-                            f"BM25 #{r['posicaoBm25']}" if r["posicaoBm25"] else ""]
+            for n, r in enumerate(busca["trechos"], start=1):
+                posicoes = " · ".join(p for p in (
+                    f"vetorial #{r['posicaoVetorial']}" if r["posicaoVetorial"] else "",
+                    f"BM25 #{r['posicaoBm25']}" if r["posicaoBm25"] else "") if p)
                 with st.container(border=True):
                     st.html(f"<b>{n}. {h(r['caminho'])}</b>"
-                            + ui.pills((f"similaridade {r['similaridade']:.3f}", "valor"),
-                                       *[(p, "") for p in posicoes if p]))
+                            f'<div class="custo">Similaridade: <b>{r["similaridade"]:.3f}</b>'
+                            f'<span class="sinal">|</span>Posição: <b>{h(posicoes or "consulta direta ao artigo")}</b></div>')
                     st.text(r["texto"])
 
 with st.container(border=True):

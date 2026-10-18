@@ -7,6 +7,9 @@ cerca de 4x mais cara por token. O custo da conversa inteira fica no botão
 "Atendimento", no canto direito.
 """
 
+import re
+import time
+
 import pandas as pd
 import streamlit as st
 
@@ -14,6 +17,7 @@ import api
 import ui
 from formatos import brl, h, inteiro, md, porcentagem, usd
 
+PAUSA_DIGITACAO = 0.02  # segundos por palavra (~50 palavras/s): rápido, mas dá para ver escrevendo
 # Genéricas de propósito: cada cliente tem o seu pedido e o seu produto.
 SUGESTOES = [
     "Quero devolver uma compra feita pelo site",
@@ -123,7 +127,12 @@ if pergunta:
         for evento in api.conversar(st.session_state.sessao, pergunta):
             if evento["tipo"] == "delta":
                 brutos.append(evento["texto"])
-                yield md(evento["texto"])  # "R$ 299,00" não pode virar fórmula
+                # Efeito de digitação, palavra a palavra. Só visual: o custo é por
+                # token gerado, e o texto já chegou. Resposta pronta e do cache
+                # chegam inteiras, e sem isto apareceriam de uma vez.
+                for palavra in re.findall(r"\S+\s*|\s+", evento["texto"]):
+                    yield md(palavra)  # "R$ 299,00" não pode virar fórmula
+                    time.sleep(PAUSA_DIGITACAO)
             elif evento["tipo"] == "erro":
                 erros.append(evento["mensagem"])
             elif evento["tipo"] == "fim":

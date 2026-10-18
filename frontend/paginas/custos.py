@@ -20,9 +20,9 @@ PERIODOS = {"Hoje": 0, "7 dias": 7, "30 dias": 30, "Tudo": None}
 @st.cache_data(ttl=20, show_spinner=False)
 def carregar(desde: str | None) -> tuple[dict, list, list]:
     """As três consultas do período. 20 s de cache: trocar de página e voltar não refaz tudo."""
-    return (api.get("/api/custos/resumo", desde=desde),
-            api.get("/api/custos/turnos", desde=desde, limite=300)["turnos"],
-            api.get("/api/custos/chamadas", desde=desde, limite=500)["chamadas"])
+    return (api.get("/custos/resumo", desde=desde),
+            api.get("/custos/mensagens", desde=desde, limite=300)["mensagens"],
+            api.get("/custos/chamadas", desde=desde, limite=500)["chamadas"])
 
 
 esquerda, meio, direita = st.columns([3, 2, 1], vertical_alignment="bottom")
@@ -171,6 +171,6 @@ if config:
 with st.expander("Estimar o custo de um texto como entrada", icon=":material/calculate:"):
     texto = st.text_area("Texto (ex.: um prompt novo)", height=140)
     if texto:
-        estimativa = api.post("/api/custos/estimar", {"texto": texto})
+        estimativa = api.post("/custos/estimativas", {"texto": texto})
         st.markdown(md(f"**{inteiro(estimativa['tokens'])} tokens** em `{estimativa['modelo']}` = "
                        f"**{brl(estimativa['brl'], 6)}** ({usd(estimativa['usd'])}) a cada envio, sem cache."))

@@ -25,7 +25,7 @@ cd backend
 ..\.venv\Scripts\streamlit run app.py
 ```
 
-Abra http://localhost:8501. As leis já estão baixadas em `backend/dados/documentos/`. Para baixar de novo do Planalto: `python -m scripts.baixar_documentos`.
+Abra http://127.0.0.1:8501. As leis já estão baixadas em `backend/dados/documentos/`. Para baixar de novo do Planalto: `python -m scripts.baixar_documentos`.
 
 ## Arquitetura
 
@@ -160,6 +160,27 @@ Mapa do `detalhes ia economia token.txt` para o código:
 | 13. Resposta pequena sem dado | nada relevante → frase pronta, sem LLM |
 | 14. Medir tudo | `ai_usage` + `turnos`; tokens vindos do `usage` da API; tela de Custos |
 | Extras | cache semântico, RAG, resumo de conversa, transferência para humano cedo, avaliação |
+
+## API REST
+
+Documentação interativa em http://127.0.0.1:8000/docs. Para testar, clique em **Authorize** e cole a senha (`AUTH_SENHA` do `backend/.env`). Todas as rotas ficam sob `/api/v1` e exigem a senha no cabeçalho `X-Senha`; só `/health` é pública.
+
+| Método | Rota | O que faz |
+|---|---|---|
+| POST | `/api/v1/conversas` | cria conversa e protocolo (201) |
+| GET | `/api/v1/conversas` | lista conversas, com custo de cada uma |
+| GET | `/api/v1/conversas/{id}` | abre a conversa com custos, rota e fontes (404 se não existir) |
+| DELETE | `/api/v1/conversas/{id}` | apaga a conversa (204); os custos ficam no livro-caixa |
+| POST | `/api/v1/conversas/{id}/mensagens` | envia mensagem; resposta em streaming NDJSON |
+| GET | `/api/v1/base/documentos` | documentos do RAG, com trechos e tokens |
+| GET | `/api/v1/base/trechos?fonte=` / `?busca=` | lista trechos ou mostra o que a busca híbrida devolve |
+| POST | `/api/v1/base/indexacoes` | reindexa (incremental) e limpa o cache se a base mudou |
+| GET / DELETE | `/api/v1/base/cache` | lista / limpa o cache semântico |
+| DELETE | `/api/v1/base/cache/{id}` | apaga uma resposta do cache (204) |
+| GET | `/api/v1/pedidos`, `/api/v1/pedidos/{numero}` | pedidos fictícios |
+| GET | `/api/v1/custos/resumo`, `/chamadas`, `/mensagens` | livro-caixa |
+| POST | `/api/v1/custos/estimativas` | tokens e custo de um texto como entrada |
+| GET | `/api/v1/configuracao` | modelos, preços e parâmetros em uso |
 
 ## Memória da conversa: SQLite ou Redis?
 
