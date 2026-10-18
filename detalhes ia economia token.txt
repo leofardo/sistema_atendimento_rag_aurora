@@ -1,0 +1,192 @@
+# Técnicas de economia de tokens em chatbots com IA
+
+> Extraído do agente financeiro do projeto Financeiro Pessoal.
+> Resultado: de ~R$ 0,019 para R$ 0,005–0,008 por mensagem (60–75% mais barato),
+> com respostas mais corretas.
+
+---
+
+## 1. Não mandar a base inteira: buscar só o que a pergunta precisa
+
+**Problema:** mandar todos os dados em toda mensagem. Um "oi" custava o mesmo que uma análise do ano.
+
+**O que fizemos:**
+- **1ª versão:** uma chamada barata interpretava a pergunta (mês, categoria, item) e o código recortava os dados antes de enviar.
+- **Versão final:** a IA recebe uma **ferramenta de consulta** (tool calling) e busca sozinha só o que precisa (`SELECT ... ORDER BY ... LIMIT 5`).
+
+**No atendimento:** a IA não recebe o catálogo inteiro, todos os pedidos ou todas as FAQs. Ela ganha ferramentas como `buscar_pedido(numero)`, `consultar_produto(nome)` e `buscar_politica(tema)`.
+
+**Ganho:** entrada caiu de ~7.700 para ~5.000 tokens, e uma chamada a menos por pergunta.
+
+---
+
+## 2. Deixar o código fazer a conta, não a IA
+
+**Problema:** o modelo errava ranking e soma feitos "de cabeça" e gastava tokens tentando.
+
+**O que fizemos:**
+- Ranking, soma e filtro passaram a ser feitos pelo banco (SQL).
+- O código pré-calcula o que a IA errava: o mês em que cada parcelamento termina, quantas parcelas faltam, o ano a que se refere cada mês ("novembro" = 2026-11), o resumo do mês vigente.
+
+**No atendimento:** prazo de entrega, valor de frete, status do pedido, se está dentro da garantia ou não. O código calcula e a IA só comunica.
+
+**Ganho:** menos tokens de raciocínio, menos erro e menos pergunta de correção do usuário (que também custa).
+
+---
+
+## 3. Prompt caching: o texto fixo no começo, o variável no fim
+
+**Como funciona:** a OpenAI dá ~75–90% de desconto nos tokens de entrada que se repetem entre chamadas, mas só para um **prefixo idêntico de pelo menos 1.024 tokens**.
+
+**O que fizemos:**
+- Na mensagem `system` ficam só textos fixos: prompt, instruções e esquema do banco.
+- Data de hoje, histórico e pergunta vão **no fim**, na mensagem do usuário.
+- Antes, o JSON variável vinha no meio e quebrava o prefixo, e o cache nunca era usado.
+
+**No atendimento:** persona, políticas, tom de voz e descrição das ferramentas no começo, sempre na mesma ordem e sem nada dinâmico no meio (nem data, nem nome do cliente).
+
+**Ganho:** de 2.300 a 4.100 tokens com desconto por chamada.
+
+---
+
+## 4. Formato compacto dos dados
+
+**O que fizemos:**
+- **CSV com cabeçalho único** em vez de JSON por linha: JSON custa ~2× mais pelo mesmo dado.
+- **Colunas de auditoria removidas** (`created_at`, `updated_at`): gastam tokens sem ajudar a resposta.
+- **Listas auxiliares com só os campos necessários:** 4 campos em vez de 13. Uma lista sozinha chegou a ser 39% do contexto.
+- **Valores numéricos limpos** (`785.88`) em vez de texto formatado (`"R$ 785,88"`).
+
+**No atendimento:** ao devolver um pedido para a IA, mande `status, previsao, rastreio`, e não o objeto inteiro do banco.
+
+---
+
+## 5. Não mandar o mesmo dado duas vezes
+
+**O que fizemos:** listas que eram só outra forma das mesmas linhas (o mesmo dado em JSON além do CSV) foram removidas. Sozinhas, elas eram 47% do contexto.
+
+**No atendimento:** se o pedido já veio no resultado da ferramenta, não repita ele no prompt nem num resumo.
+
+---
+
+## 6. Histórico curto e inteligente
+
+**O que fizemos:**
+- Só as **últimas 8 mensagens** vão para a IA.
+- **Saudação vai sem histórico:** "olá" não precisa da conversa anterior, que custava ~1.000 tokens a mais.
+- Próximo passo planejado: **cortar respostas longas antigas** (ex.: 500 caracteres cada).
+
+**No atendimento:** conversas são longas. Guarde um **resumo da conversa** e mande só as últimas trocas completas.
+
+---
+
+## 7. Resolver por regra antes de chamar a IA
+
+**O que fizemos:** uma regra em Python detecta perguntas ambíguas ("mostre minhas contas") e devolve a pergunta de esclarecimento **sem chamar a IA**. Custo do turno: zero.
+
+**No atendimento:** saudação, "obrigado", horário de funcionamento, menu de opções e "falar com atendente" podem ter resposta pronta, sem gastar tokens.
+
+---
+
+## 8. Modelo certo para cada tarefa (roteamento)
+
+**O que fizemos:**
+- Classificar a pergunta (tarefa simples) → modelo barato (`gpt-4o-mini`, ~R$ 0,0007 por chamada).
+- Responder → modelo melhor (`gpt-4.1-mini`).
+- O modelo da etapa barata é fixo e não acompanha o escolhido nas configurações, para a classificação não ficar mais cara que a economia que ela gera.
+
+**No atendimento:** modelo nano/mini para classificar a intenção (dúvida, reclamação, troca, cancelamento); modelo melhor só quando precisa redigir algo delicado.
+
+---
+
+## 9. Controlar o tamanho da resposta
+
+**Por quê:** token de **saída custa ~4× mais** que o de entrada. Uma lista de 20 itens custou mais que a consulta inteira.
+
+**O que fizemos:**
+- `max_completion_tokens` como teto.
+- Prompt pedindo "direto, sem textão, só o necessário".
+- Em modelos com raciocínio, `reasoning_effort` baixo, para os tokens de raciocínio não consumirem o orçamento.
+
+**No atendimento:** respostas de 2–4 frases. Lista longa só se o cliente pedir.
+
+---
+
+## 10. Evitar idas e voltas desnecessárias
+
+**Problema:** a IA perguntar "quer todas ou só as pendentes?" gasta uma chamada inteira e não entrega nada.
+
+**O que fizemos:**
+- Instrução: "se dá para responder, responda; ofereça a alternativa em uma linha no fim".
+- Trava no código: a IA nunca pergunta de volta duas vezes seguidas.
+
+**No atendimento:** responda com a interpretação mais provável e confirme no final, em vez de abrir um questionário.
+
+---
+
+## 11. Limites nas ferramentas
+
+**O que fizemos:**
+- Máximo de **4 consultas** por pergunta; na última rodada a IA é obrigada a responder.
+- Resultado cortado em **200 linhas**, com aviso para a IA filtrar mais.
+- Limite de processamento por consulta, para evitar uma query gigante por engano.
+- Erro da consulta volta para a IA corrigir sozinha (barato), em vez de derrubar a conversa.
+
+**No atendimento:** limite de chamadas de ferramenta por mensagem e resultados paginados (ex.: os 5 pedidos mais recentes, não todos).
+
+---
+
+## 12. Dar o "mapa" pronto, para a IA não gastar consultas descobrindo
+
+**O que fizemos:** o código gera e envia o esquema do banco com os **valores reais**: categorias, itens, formas de pagamento, período com dados e exemplos de consulta. A IA acerta de primeira, sem rodadas extras para descobrir nomes.
+
+**No atendimento:** liste na instrução as categorias de produto, os status de pedido possíveis e os nomes exatos das políticas.
+
+---
+
+## 13. Resposta pequena quando não há dado
+
+**Problema:** um filtro vazio caía no "carrega tudo", o que custava ~17 mil tokens para no fim responder "não há dados".
+
+**O que fizemos:**
+- Mês sem lançamentos → um contexto mínimo com um aviso.
+- Filtros afrouxados **na ordem certa** (item → categoria → mês) em vez de largar tudo de uma vez.
+
+**No atendimento:** pedido não encontrado → responda isso e peça o dado certo. Não carregue o histórico inteiro do cliente "por garantia".
+
+---
+
+## 14. Medir tudo (sem medição não há otimização)
+
+**O que fizemos:**
+- Os tokens vêm da **própria API** (`usage`; em streaming, com `stream_options.include_usage`). Sem `usage`, `tiktoken` como reserva.
+- **Livro-caixa** por chamada: modelo, entrada, cache, saída, dólar, cotação e duração.
+- O custo aparece abaixo de cada mensagem no chat, e a tela de configurações mostra quanto o prompt custa a cada envio.
+- Cotação do dólar buscada uma vez por dia, com fonte reserva (Banco Central).
+
+**No atendimento:** custo por conversa, por intenção e por cliente. Assim você descobre que, por exemplo, "rastrear pedido" responde por 60% do gasto e merece resposta por regra.
+
+---
+
+## Extras para atendimento (não usados neste projeto)
+
+- **Cache de respostas:** perguntas iguais ou muito parecidas ("qual o horário?") reutilizam uma resposta anterior sem chamar a IA.
+- **RAG para FAQ e políticas:** buscar só os 3–5 trechos relevantes da base de conhecimento em vez de mandar o manual inteiro.
+- **Resumo da conversa:** a cada N mensagens, resumir o histórico e descartar as mensagens antigas.
+- **Passar para um humano cedo:** detectar irritação ou assunto sensível e transferir, em vez de gastar 10 trocas.
+- **Evals:** um conjunto fixo de perguntas com a resposta esperada, rodado a cada mudança de prompt, para medir se a economia não derrubou a qualidade.
+
+---
+
+## Checklist rápido
+
+- [ ] A IA busca dados por ferramenta, sem receber tudo
+- [ ] Contas e regras no código, não na IA
+- [ ] Texto fixo no início do prompt (cache), variável no fim
+- [ ] Dados em formato compacto, sem campos inúteis nem duplicados
+- [ ] Histórico curto, com resumo em conversas longas
+- [ ] Respostas prontas para perguntas triviais
+- [ ] Modelo barato para classificar, melhor só para responder
+- [ ] Teto e instrução de tamanho na resposta
+- [ ] Limite de chamadas de ferramenta e de linhas retornadas
+- [ ] Custo medido por chamada, com tokens vindos da API

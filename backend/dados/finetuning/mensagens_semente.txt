@@ -1,0 +1,100 @@
+# Mensagens de cliente para gerar o dataset do roteador (uma por linha).
+# Formato com histórico:  Histórico: Cliente: ... | Assistente: ... || Mensagem: ...
+# Linhas começando com # são ignoradas.
+comprei uma air fryer pelo site e me arrependi, posso devolver?
+quero devolver o fone que comprei no app, não gostei do som
+dá pra desistir da compra que fiz por telefone?
+recebi ontem e não quero mais, como faço?
+comprei dia 10 pelo site, ainda dá tempo de devolver?
+tenho que pagar o frete pra devolver?
+posso devolver o produto aberto?
+precisa estar na embalagem original pra devolver?
+comprei na loja do shopping e quero trocar por outra cor
+dá pra trocar a voltagem do liquidificador? comprei 110 e minha casa é 220
+comprei uma camiseta na loja e ficou pequena, troca?
+a troca na loja é em dinheiro ou vale?
+minha geladeira parou de gelar
+a tv chegou com a tela trincada
+o notebook não liga mais, comprei faz 2 meses
+o ventilador está fazendo um barulho estranho desde que chegou
+a assistência já está com meu celular há mais de 30 dias e nada
+quanto tempo de garantia tem um micro-ondas?
+qual a garantia de produto que não é durável?
+o defeito apareceu depois de 4 meses, ainda tenho garantia?
+quero cancelar meu pedido
+cancela o pedido 100250 por favor
+o pedido já foi enviado, ainda consigo cancelar?
+quando cai o estorno no cartão?
+paguei no pix e cancelei, quando volta o dinheiro?
+paguei boleto, como recebo o reembolso?
+cadê meu dinheiro? cancelei faz uma semana
+onde está meu pedido 100245?
+qual o status do pedido 100270?
+quero rastrear minha encomenda
+meu pedido 100250 não chegou ainda e já passou do prazo
+o prazo de entrega era ontem e nada
+quanto tempo demora pra chegar em Recife?
+o frete é grátis?
+vocês entregam no Norte?
+posso retirar na loja?
+fiz pedido pra retirar na loja e não fui buscar, o que acontece?
+parcela em quantas vezes sem juros?
+tem desconto no pix?
+o boleto venceu, e agora?
+meu cupom não funcionou
+posso usar dois cupons?
+o preço no carrinho está diferente do anúncio
+baixou o preço depois que comprei, vocês devolvem a diferença?
+como funciona a garantia estendida?
+quero cancelar a garantia estendida que contratei semana passada
+a garantia estendida cobre queda?
+a instalação do ar condicionado é grátis?
+como agendo a instalação da lava-louças?
+se eu instalar com outro técnico perco a garantia?
+qual o horário do atendimento humano no domingo?
+qual o telefone do sac?
+o sac funciona 24 horas?
+tenho direito a protocolo?
+quero o histórico do meu atendimento
+o atendente pediu pra eu repetir tudo de novo, pode isso?
+liguei e caiu a ligação no meio do atendimento
+quem tem atendimento prioritário?
+sou idosa, tenho prioridade no telefone?
+vocês atendem em libras?
+vocês pedem senha por whatsapp?
+recebi mensagem pedindo código do sms em nome da aurora
+quero excluir meus dados do cadastro
+vocês podem me negativar sem avisar?
+fui cobrado duas vezes no cartão
+estão cobrando uma compra que eu não fiz
+o produto pegou fogo na tomada
+quero falar com um atendente
+me passa pra um humano por favor
+isso é um absurdo, já falei três vezes e ninguém resolve
+o que diz o código de defesa do consumidor sobre propaganda enganosa?
+quais são os direitos básicos do consumidor?
+o site de vocês precisa mostrar o cnpj?
+oi
+bom dia, tudo bem?
+obrigado pela ajuda!
+valeu, era só isso
+qual a capital da França?
+me conta uma piada
+quem ganhou o jogo ontem?
+você é um robô?
+100231
+meu pedido é 100262
+Histórico: Cliente: comprei uma air fryer pelo site | Assistente: Posso ajudar com a sua air fryer. O que aconteceu? || Mensagem: me arrependi, dá pra devolver?
+Histórico: Cliente: quero devolver meu pedido 100231 | Assistente: Pode sim, você tem 7 dias do recebimento. || Mensagem: e o frete, eu pago?
+Histórico: Cliente: quanto tempo tenho pra devolver compra online? | Assistente: 7 dias corridos do recebimento. || Mensagem: e se eu comprei na loja?
+Histórico: Cliente: o estorno no pix demora quanto? | Assistente: Até 2 dias úteis. || Mensagem: e no cartão?
+Histórico: Cliente: minha geladeira parou | Assistente: Sinto muito. Me passa o número do pedido? || Mensagem: 100262
+Histórico: Cliente: minha tv veio quebrada | Assistente: Você pode recusar ou avisar em 7 dias com fotos. || Mensagem: já passou 10 dias, e agora?
+Histórico: Cliente: comprei um fogão | Assistente: Como posso ajudar com o fogão? || Mensagem: vocês instalam?
+Histórico: Cliente: quero cancelar o pedido 100250 | Assistente: O pedido ainda não foi enviado, o cancelamento é imediato. || Mensagem: e o dinheiro do boleto volta como?
+Histórico: Cliente: fui cobrado em dobro | Assistente: Vou transferir para um atendente. || Mensagem: ok, enquanto isso, tenho direito a receber em dobro?
+Histórico: Cliente: tenho prioridade no atendimento? tenho 65 anos | Assistente: Sim, pessoas com 60 anos ou mais têm prioridade. || Mensagem: vale no telefone também?
+Histórico: Cliente: meu cupom não aplicou | Assistente: Qual o código e o valor do carrinho? || Mensagem: AURORA10 e o carrinho tá 150 reais
+Histórico: Cliente: o pedido 100245 vai chegar hoje? | Assistente: Saiu para entrega, previsão hoje. || Mensagem: e se eu não estiver em casa?
+Histórico: Cliente: quero trocar o tamanho | Assistente: A compra foi em loja ou online? || Mensagem: na loja, semana passada
+Histórico: Cliente: o atendimento de vocês é péssimo | Assistente: Sinto muito. Pode me contar o que aconteceu? || Mensagem: já expliquei duas vezes, quero falar com alguém agora
